@@ -111,7 +111,12 @@ justfile group or \"Other\".  When TRANSFORM is non-nil, return CANDIDATE."
                          (list consult-just-executable recipe)
                          " ")))
     (with-current-buffer (compile cmd)
-      (rename-buffer buf-name t))))
+      (rename-buffer buf-name t))
+    ;; Populate projectile's per-project compile cache so F5 / recompile
+    ;; can re-run this command without prompting.
+    (when (and (fboundp 'projectile-compilation-dir)
+               (boundp 'projectile-compilation-cmd-map))
+      (puthash (projectile-compilation-dir) cmd projectile-compilation-cmd-map))))
 
 ;;; Marginalia integration
 
