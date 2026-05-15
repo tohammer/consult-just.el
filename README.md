@@ -50,6 +50,10 @@ Bind it:
 |---------------------------|--------------------------------------|-----------------------------------|
 | `consult-just-executable` | `(executable-find "just")`           | Path to the `just` binary         |
 
+## License
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).
+
 ## AI Disclaimer
 
 This package was developed with the help of AI coding agents.
