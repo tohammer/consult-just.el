@@ -5,6 +5,7 @@
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "28.1") (consult "0.34"))
 ;; Keywords: convenience, tools, just
+;; URL: https://github.com/tohammer/consult-just.el
 ;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:

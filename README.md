@@ -1,16 +1,6 @@
 # consult-just
 
-[Consult](https://github.com/minad/consult)-based completion for [just](https://github.com/casey/just) recipes.
-
-## Features
-
-- Select and run `just` recipes via `consult--read` completion
-- Recipes grouped by their `[group(...)]` attribute; ungrouped recipes appear under **Other**
-- Up to 5 recently used recipes surface in a **Recent** section at the top
-- Doc strings shown as annotations via [marginalia](https://github.com/minad/marginalia) (when active) or the built-in annotator
-- Private recipes (marked `[private]` or prefixed with `_`) are hidden
-- `just` is invoked from `default-directory`; it finds the justfile itself by walking up the directory tree
-- Selected recipe runs in a named `*just: <recipe>*` compilation buffer
+[Consult](https://github.com/minad/consult)-based completion for [just](https://github.com/casey/just) recipes. Select and run recipes interactively with grouping, recency tracking, and doc string annotations.
 
 ## Requirements
 
@@ -18,13 +8,13 @@
 - [consult](https://github.com/minad/consult) 0.34+
 - [just](https://github.com/casey/just) with `--unstable` dump support
 
-## Setup
+## Installation
 
-### use-package
+### use-package (Emacs 29+)
 
 ```elisp
 (use-package consult-just
-  :ensure t
+  :vc (:url "https://github.com/tohammer/consult-just.el")
   :commands consult-just)
 ```
 
@@ -33,7 +23,8 @@
 In `packages.el`:
 
 ```elisp
-(package! consult-just)
+(package! consult-just
+  :recipe (:host github :repo "tohammer/consult-just.el"))
 ```
 
 In `config.el`:
@@ -43,18 +34,22 @@ In `config.el`:
   :commands consult-just)
 ```
 
-Bind it however you like, e.g.:
+Bind it:
 
 ```elisp
-(global-set-key (kbd "C-c j") #'consult-just)
+(map! "C-c j" #'consult-just)
 ```
 
 ## Usage
 
-`M-x consult-just` — opens a completing-read prompt listing all public recipes from the nearest justfile. Select one and press `RET` to run it.
+`M-x consult-just` — opens a completing-read prompt with all public recipes from the nearest justfile. Recipes are grouped by their `[group(...)]` attribute; up to 5 recently used recipes appear in a **Recent** section. Private recipes (`[private]` or `_`-prefixed) are hidden. The selected recipe runs in a `*just: <recipe>*` compilation buffer.
 
 ## Customization
 
-| Variable                  | Default                        | Description                    |
-|---------------------------|--------------------------------|--------------------------------|
-| `consult-just-executable` | result of `(executable-find "just")` | Path to the `just` binary |
+| Variable                  | Default                              | Description                       |
+|---------------------------|--------------------------------------|-----------------------------------|
+| `consult-just-executable` | `(executable-find "just")`           | Path to the `just` binary         |
+
+## AI Disclaimer
+
+This package was developed with the help of AI coding agents.
