@@ -12,9 +12,10 @@
    `sub::foo`, which is what just accepts on the command line), `:group`,
    `:doc`, `:params`, `:no-cd`.
 3. `consult-just` builds candidates (recipe names with the plist in the text
-   property `consult-just--recipe`) and calls `consult--read` with a group
-   function, an annotation function and `consult--lookup-member`, which
-   returns the original propertized candidate.
+   property `consult-just--recipe`) and calls `consult--read` with an
+   annotation function, `:history` and `consult--lookup-member`, which
+   returns the original propertized candidate. It passes neither `:group`
+   nor `:sort`, so the completion UI sorts.
 4. `consult-just--read-arguments` prompts only if the recipe has parameters.
 5. `consult-just--run` calls `compile` in the justfile's directory with
    `compilation-buffer-name-function` bound to give `*just: NAME*`.
@@ -41,18 +42,26 @@
   `consult-just-test-run-reuses-buffer`.
 - **compile-command.** `compile` sets the global `compile-command`; users can
   rely on `recompile` re-running the last recipe.
-- **Recent section.** `consult-just--history` is shared by all justfiles.
-  Recent names are filtered to recipes of the current justfile before the
-  limit is applied, so recipes from other projects do not fill the section.
-  One list is computed per call and shared by the ordering, group and
-  annotation functions; 0.1 computed it three ways. Test:
-  `consult-just-test-recent`.
-- **Annotations.** One annotation function, with columns computed from all
-  candidates so that docs line up. 0.1 also registered a marginalia
-  annotator that duplicated it and referenced marginalia variables without
-  declaring them (byte-compile warnings). Without an entry in
-  `marginalia-annotators`, marginalia uses the built-in annotation, so the
-  separate annotator was dropped.
+- **Recency is the completion UI's job.** 0.1 and 0.2 built a "Recent"
+  group themselves and passed `:sort nil`, which overrode the user's sorting
+  (vertico's history sort, prescient, …) and moved a recipe between groups
+  depending on use. `:group` is meant for what an item is, and `:sort nil` for
+  lists whose order means something (buffer lines, imenu); neither applies.
+  0.3 passes `:history` and lets the UI sort. Grouping by the justfile's
+  groups was rejected because vertico sorts before grouping, so it would not
+  give a flat most-recent-first list. Test:
+  `consult-just-test-command-end-to-end`.
+- **Annotations.** One annotation function with two columns, group and
+  doc. The group column starts two columns after the widest name and the doc
+  column two columns after the widest group (right after the names when no
+  recipe has a group), via `(space :align-to COL)`. Widths come from
+  `string-width`, so wide characters align. 0.1 also registered a marginalia
+  annotator that duplicated the built-in one and referenced marginalia
+  variables without declaring them. Without an entry in
+  `marginalia-annotators`, marginalia uses the built-in annotation, so no
+  marginalia annotator is registered. Tests: `consult-just-test-annotate`,
+  `consult-just-test-annotate-alignment`,
+  `consult-just-test-annotate-no-groups`.
 - **Arguments as a raw string.** The argument string is appended to the
   command unquoted, so the user can quote and pass several words for
   variadic parameters, and the command in the compilation buffer shows

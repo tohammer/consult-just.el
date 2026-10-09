@@ -139,45 +139,61 @@ Regression: the stderr text was parsed as JSON."
 
 ;;; Completion
 
-(ert-deftest consult-just-test-recent ()
-  "Recent names exist in this justfile, are unique and capped."
-  (let ((recipes (consult-just-test--recipes)))
-    (let ((consult-just--history '("other" "build" "build" "sub::foo" "deploy"))
-          (consult-just-recent-count 2))
-      (should (equal (consult-just--recent recipes) '("build" "sub::foo"))))
-    (let ((consult-just--history nil))
-      (should-not (consult-just--recent recipes)))))
+(ert-deftest consult-just-test-candidates ()
+  "Candidates are the recipe names with the recipe attached."
+  (let ((cands (consult-just--candidates (consult-just-test--recipes))))
+    (should (member "sub::foo" cands))
+    (should (equal (consult-just--get (car (member "build" cands)) :doc)
+                   "Build it"))))
 
-(ert-deftest consult-just-test-candidates-order ()
-  "Recent candidates come first, in history order, without duplicates."
-  (let ((cands (consult-just--candidates (consult-just-test--recipes)
-                                         '("sub::foo" "deploy"))))
-    (should (equal (seq-take cands 2) '("sub::foo" "deploy")))
-    (should (= (length cands) (length (seq-uniq cands))))
-    (should (get-text-property 0 'consult-just--recipe (car cands)))))
+(defun consult-just-test--annotations ()
+  "Return an alist of candidate name to annotation for the canned dump."
+  (let* ((cands (consult-just--candidates (consult-just-test--recipes)))
+         (annotate (consult-just--annotate-function cands)))
+    (mapcar (lambda (c) (cons c (funcall annotate c))) cands)))
 
-(ert-deftest consult-just-test-group-function ()
-  "Recent first, then the recipe's group, then \"Other\"."
-  (let* ((recent '("build"))
-         (cands (consult-just--candidates (consult-just-test--recipes) recent))
-         (group (consult-just--group-function recent))
-         (cand (lambda (n) (car (member n cands)))))
-    (should (equal (funcall group (funcall cand "build") nil) "Recent"))
-    (should (equal (funcall group (funcall cand "test") nil) "ci"))
-    (should (equal (funcall group (funcall cand "deploy") nil) "Other"))
-    (should (equal (funcall group "x" t) "x"))))
+(defun consult-just-test--align-to (annotation text)
+  "Return the :align-to column of the space before TEXT in ANNOTATION."
+  (let ((pos (string-search text annotation)))
+    (and pos (> pos 0)
+         (nth 2 (get-text-property (1- pos) 'display annotation)))))
 
 (ert-deftest consult-just-test-annotate ()
-  "Doc strings are shown; the group is shown only for recent recipes."
-  (let* ((recent '("build"))
-         (cands (consult-just--candidates (consult-just-test--recipes) recent))
-         (annotate (consult-just--annotate-function cands recent))
-         (text (lambda (n) (let ((a (funcall annotate (car (member n cands)))))
-                             (and a (substring-no-properties a))))))
-    (should (string-match-p "dev.*Build it" (funcall text "build")))
-    ;; Not recent: only the doc, no group.
-    (should (equal (string-trim (funcall text "sub::foo")) "sub thing"))
-    (should-not (funcall text "deploy"))))
+  "Every recipe shows its group and its doc string, if it has them."
+  (let ((anns (consult-just-test--annotations)))
+    (should (equal (substring-no-properties (cdr (assoc "build" anns)))
+                   " dev Build it"))
+    (should (equal (substring-no-properties (cdr (assoc "sub::foo" anns)))
+                   " sub sub thing"))
+    (should (equal (substring-no-properties (cdr (assoc "test" anns))) " ci"))
+    (should-not (cdr (assoc "deploy" anns)))
+    (should (eq (get-text-property 1 'face (cdr (assoc "build" anns)))
+                'consult-just-group))
+    (should (eq (get-text-property 0 'face (substring (cdr (assoc "build" anns)) -1))
+                'consult-just-doc))))
+
+(ert-deftest consult-just-test-annotate-alignment ()
+  "Groups share one column after the longest name; docs share another
+after the longest group."
+  (let* ((anns (consult-just-test--annotations))
+         (name-width (apply #'max (mapcar (lambda (a) (string-width (car a))) anns)))
+         (group-col (+ name-width 2))
+         (doc-col (+ group-col (length "tools") 2)))
+    (should (equal (consult-just-test--align-to (cdr (assoc "build" anns)) "dev")
+                   group-col))
+    (should (equal (consult-just-test--align-to (cdr (assoc "sub::bar" anns)) "tools")
+                   group-col))
+    (should (equal (consult-just-test--align-to (cdr (assoc "build" anns)) "Build it")
+                   doc-col))
+    (should (equal (consult-just-test--align-to (cdr (assoc "sub::foo" anns)) "sub thing")
+                   doc-col))))
+
+(ert-deftest consult-just-test-annotate-no-groups ()
+  "Without any group, the doc column follows the name column."
+  (let* ((cands (consult-just--candidates
+                 (list (list :name "a" :doc "Doc a") (list :name "bbb"))))
+         (ann (funcall (consult-just--annotate-function cands) (car cands))))
+    (should (equal (consult-just-test--align-to ann "Doc a") 5))))
 
 (ert-deftest consult-just-test-no-recipes ()
   "A justfile without public recipes gives a `user-error'.
@@ -247,17 +263,23 @@ Regression: the buffer was renamed after `compile', so each run left a
     (kill-buffer "*just: build*")))
 
 (ert-deftest consult-just-test-command-end-to-end ()
-  "`consult-just' passes the selected recipe, its arguments and the root."
-  (let (ran)
+  "`consult-just' passes the selected recipe, its arguments and the root.
+Sorting is left to the completion UI and nothing is grouped."
+  (let (ran options)
     (cl-letf (((symbol-function 'consult-just--dump) #'consult-just-test--dump)
               ((symbol-function 'consult--read)
-               (lambda (cands &rest _) (car (member "deploy" cands))))
+               (lambda (cands &rest opts)
+                 (setq options opts)
+                 (car (member "deploy" cands))))
               ((symbol-function 'read-string) (lambda (&rest _) "prod"))
               ((symbol-function 'consult-just--run)
                (lambda (r args root) (setq ran (list (plist-get r :name) args root)))))
       (let ((consult-just--history nil))
         (consult-just)))
-    (should (equal ran '("deploy" "prod" "/path/to/project/")))))
+    (should (equal ran '("deploy" "prod" "/path/to/project/")))
+    (should-not (plist-member options :sort))
+    (should-not (plist-member options :group))
+    (should (eq (plist-get options :history) 'consult-just--history))))
 
 ;;; Real just
 

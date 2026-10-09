@@ -3,7 +3,7 @@
 ;; Author: Tobias Hammer <tohammer@users.noreply.github.com>
 ;; Maintainer: Tobias Hammer <tohammer@users.noreply.github.com>
 ;; Copyright (C) 2025 Tobias Hammer
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "28.1") (consult "0.34"))
 ;; Keywords: convenience, tools, just
 ;; URL: https://github.com/tohammer/consult-just.el
@@ -29,18 +29,18 @@
 ;; Provides `consult-just', an interactive command to select and run
 ;; recipes from a justfile using consult-based completion.
 ;;
-;; Recipes are displayed with their group (if any) and doc string.
-;; Recipes of `mod' submodules are listed as `module::recipe'.
-;; Recently used recipes appear in a "Recent" section at the top.
-;; Recipes with parameters prompt for an argument string.  The
-;; selected recipe is executed in a compilation buffer.
+;; Each recipe is annotated with its group and doc string in two
+;; aligned columns.  Recipes of `mod' submodules are listed as
+;; `module::recipe'.  Recipes are sorted by the completion UI, which
+;; usually puts recently used ones first.  Recipes with parameters
+;; prompt for an argument string.  The selected recipe is executed in
+;; a compilation buffer.
 ;;
 ;; Usage:
 ;;   M-x consult-just
 ;;
 ;; Customization:
-;;   `consult-just-executable'   - name or path of the just binary
-;;   `consult-just-recent-count' - size of the "Recent" section
+;;   `consult-just-executable' - name or path of the just binary
 
 ;;; Code:
 
@@ -63,9 +63,13 @@ A bare name is looked up in variable `exec-path' (on the remote host
 for remote directories) each time `consult-just' runs."
   :type 'string)
 
-(defcustom consult-just-recent-count 5
-  "Number of recently used recipes shown in the \"Recent\" section."
-  :type 'natnum)
+(defface consult-just-group
+  '((t :inherit font-lock-type-face))
+  "Face for the group column of `consult-just' annotations.")
+
+(defface consult-just-doc
+  '((t :inherit completions-annotations))
+  "Face for the doc string column of `consult-just' annotations.")
 
 (defvar consult-just--history nil
   "History for `consult-just' recipe selection.")
@@ -145,59 +149,40 @@ Fall back to `default-directory' when just does not report a source."
 
 ;;; Completion
 
-(defun consult-just--recent (recipes)
-  "Return names of recently used RECIPES, most recent first.
-Only names that exist in RECIPES count, so recipes from other justfiles
-do not take up the \"Recent\" section."
-  (let ((names (mapcar (lambda (r) (plist-get r :name)) recipes)))
-    (seq-take (seq-filter (lambda (h) (member h names))
-                          (seq-uniq consult-just--history))
-              consult-just-recent-count)))
-
-(defun consult-just--candidates (recipes recent)
-  "Return completion candidates for RECIPES, the RECENT ones first.
+(defun consult-just--candidates (recipes)
+  "Return completion candidates for RECIPES.
 Each candidate is the recipe name with the plist in the text property
 `consult-just--recipe'."
-  (let ((cands (mapcar (lambda (r)
-                         (propertize (plist-get r :name) 'consult-just--recipe r))
-                       recipes)))
-    (append (delq nil (mapcar (lambda (name) (car (member name cands))) recent))
-            (seq-remove (lambda (c) (member c recent)) cands))))
+  (mapcar (lambda (r) (propertize (plist-get r :name) 'consult-just--recipe r))
+          recipes))
 
-(defun consult-just--group-function (recent)
-  "Return a consult group function that puts RECENT names under \"Recent\"."
-  (lambda (cand transform)
-    (cond (transform cand)
-          ((member cand recent) "Recent")
-          ((plist-get (get-text-property 0 'consult-just--recipe cand) :group))
-          (t "Other"))))
-
-(defun consult-just--annotate-function (candidates recent)
+(defun consult-just--annotate-function (candidates)
   "Return an annotation function for CANDIDATES.
-Doc strings are aligned in one column.  Recipes in RECENT also show
-their group, which their section heading no longer does."
-  (let* ((name-col  (+ 4 (apply #'max (mapcar #'string-width candidates))))
-         (group-len (apply #'max 0
-                           (mapcar (lambda (c)
-                                     (if-let* (((member c recent))
-                                               (r (get-text-property 0 'consult-just--recipe c))
-                                               (g (plist-get r :group)))
-                                         (string-width g)
-                                       0))
-                                   candidates)))
-         (doc-col   (if (> group-len 0) (+ name-col group-len 4) name-col)))
+The group and the doc string are shown in two columns, each aligned
+across all CANDIDATES.  The doc column starts right after the name
+column when no recipe has a group."
+  (let* ((width     (lambda (f) (apply #'max 0 (mapcar f candidates))))
+         (group-col (+ 2 (funcall width #'string-width)))
+         (group-len (funcall width
+                             (lambda (c)
+                               (string-width
+                                (or (consult-just--get c :group) "")))))
+         (doc-col   (if (> group-len 0) (+ group-col group-len 2) group-col)))
     (lambda (cand)
-      (let* ((r     (get-text-property 0 'consult-just--recipe cand))
-             (doc   (plist-get r :doc))
-             (group (and (member cand recent) (plist-get r :group))))
+      (let ((group (consult-just--get cand :group))
+            (doc   (consult-just--get cand :doc)))
         (when (or group doc)
           (concat
            (when group
-             (concat (propertize " " 'display `(space :align-to ,name-col))
-                     (propertize group 'face 'completions-annotations)))
+             (concat (propertize " " 'display `(space :align-to ,group-col))
+                     (propertize group 'face 'consult-just-group)))
            (when doc
              (concat (propertize " " 'display `(space :align-to ,doc-col))
-                     (propertize doc 'face 'completions-annotations)))))))))
+                     (propertize doc 'face 'consult-just-doc)))))))))
+
+(defun consult-just--get (cand prop)
+  "Return PROP of the recipe of candidate CAND."
+  (plist-get (get-text-property 0 'consult-just--recipe cand) prop))
 
 ;;; Running
 
@@ -252,17 +237,17 @@ meant; recipes with `no-cd' run in `default-directory' instead."
 (defun consult-just ()
   "Select and run a just recipe using consult completion.
 
-Recipes are grouped by their [group(...)] attribute, or by their module
-for recipes of `mod' submodules.  Recently used recipes appear in a
-\"Recent\" section at the top.  Doc strings are shown as annotations.
+Each recipe is annotated with its group (its [group(...)] attribute, or
+its module for recipes of `mod' submodules) and its doc string.  The
+completion UI sorts the recipes; with the default `vertico' sorting,
+recently used ones come first.
 If the recipe has parameters, prompt for arguments.  The recipe runs in
 a compilation buffer named *just: RECIPE*."
   (interactive)
   (let* ((dump       (consult-just--dump))
          (recipes    (or (consult-just--recipes dump)
                          (user-error "Consult-just: no public recipes in justfile")))
-         (recent     (consult-just--recent recipes))
-         (candidates (consult-just--candidates recipes recent))
+         (candidates (consult-just--candidates recipes))
          (selected
           (consult--read
            candidates
@@ -270,10 +255,8 @@ a compilation buffer named *just: RECIPE*."
            :require-match t
            :lookup #'consult--lookup-member
            :history 'consult-just--history
-           :annotate (consult-just--annotate-function candidates recent)
-           :category 'just-recipe
-           :group (consult-just--group-function recent)
-           :sort nil))
+           :annotate (consult-just--annotate-function candidates)
+           :category 'just-recipe))
          (recipe     (get-text-property 0 'consult-just--recipe selected)))
     (setq consult-just--history (delete-dups consult-just--history))
     (consult-just--run recipe

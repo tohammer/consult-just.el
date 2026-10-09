@@ -3,8 +3,8 @@
 Select and run [just](https://github.com/casey/just) recipes with
 [consult](https://github.com/minad/consult) completion. `M-x consult-just`
 lists the public recipes of the nearest justfile, including recipes of `mod`
-submodules. Recipes are grouped by their `[group(...)]` attribute, recently
-used ones are listed first, and doc comments are shown next to each name. The
+submodules. Each recipe is annotated with its `[group(...)]` and its doc
+comment in two aligned columns, and recently used recipes come first. The
 selected recipe runs in a compilation buffer, so `next-error`, `g` (recompile)
 and the usual compilation keys work on its output.
 
@@ -62,12 +62,15 @@ current directory (it searches upward).
 - **Candidates.** All public recipes. Private recipes (`[private]` or a
   leading `_`) are hidden. Recipes of a `mod sub` submodule are listed as
   `sub::recipe`.
-- **Groups.** The first `[group('...')]` attribute of a recipe. Module recipes
-  without a group are grouped under the module name; everything else is under
-  **Other**. Up to `consult-just-recent-count` recently used recipes of this
-  justfile are shown under **Recent**, with their group in the annotation.
-- **Annotations.** The recipe's doc comment. They are plain completion
-  annotations, so they show with or without marginalia.
+- **Annotations.** Two aligned columns after the name: the group (the first
+  `[group('...')]` attribute, or the module name for module recipes without
+  one) and the doc comment. They are plain completion annotations, so they
+  show with or without marginalia. Faces: `consult-just-group`,
+  `consult-just-doc`.
+- **Order.** Sorting is left to the completion UI. Vertico's default
+  (`vertico-sort-history-length-alpha`) lists recipes from
+  `consult-just--history` first, most recent first, then the rest by length
+  and name. prescient and similar packages apply their own ranking.
 - **Arguments.** If the recipe has parameters, you are asked for an argument
   string. The prompt shows the parameters, e.g. `Arguments for deploy (target
   env="dev" *rest):`. The string goes to the shell as typed, so quote as you
@@ -83,7 +86,6 @@ current directory (it searches upward).
 | Variable                    | Default  | Description                                      |
 |-----------------------------|----------|--------------------------------------------------|
 | `consult-just-executable`   | `"just"` | Name or path of the just binary                  |
-| `consult-just-recent-count` | `5`      | Number of recipes in the **Recent** section       |
 
 consult-just binds no keys. The completion category is `just-recipe`, for
 example for an [embark](https://github.com/oantolin/embark) keymap.
