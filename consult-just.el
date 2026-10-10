@@ -4,7 +4,7 @@
 ;; Maintainer: Tobias Hammer <tohammer@users.noreply.github.com>
 ;; Copyright (C) 2025 Tobias Hammer
 ;; Version: 0.3
-;; Package-Requires: ((emacs "28.1") (consult "0.34"))
+;; Package-Requires: ((emacs "29.1") (consult "0.34"))
 ;; Keywords: convenience, tools, just
 ;; URL: https://github.com/tohammer/consult-just.el
 ;; SPDX-License-Identifier: GPL-3.0-or-later

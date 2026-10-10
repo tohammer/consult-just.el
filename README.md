@@ -21,7 +21,7 @@ Open any file below a directory with a justfile and press `C-c j`.
 
 ## Installation
 
-Requires Emacs 28.1 or later, [consult](https://github.com/minad/consult) 0.34
+Requires Emacs 29.1 or later, [consult](https://github.com/minad/consult) 0.34
 or later, and `just` 1.x on `exec-path`.
 
 ### use-package (Emacs 30+)
