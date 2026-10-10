@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # consult 3.x needs Emacs 29.1, so 28.x cannot install the dependency
+        emacs: ["30.2", "31.1"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: purcell/setup-emacs@v8
+        with:
+          version: ${{ matrix.emacs }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y just
+          emacs -Q --batch --eval "(progn (require (quote package)) (package-initialize) (package-refresh-contents) (package-install (quote consult)))"
+      - name: Compile, checkdoc, test
+        run: make all

@@ -1,5 +1,7 @@
 # consult-just
 
+[![test](https://github.com/tohammer/consult-just.el/actions/workflows/test.yml/badge.svg)](https://github.com/tohammer/consult-just.el/actions/workflows/test.yml)
+
 Select and run [just](https://github.com/casey/just) recipes with
 [consult](https://github.com/minad/consult) completion. `M-x consult-just`
 lists the public recipes of the nearest justfile, including recipes of `mod`
