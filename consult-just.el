@@ -208,7 +208,7 @@ The string is passed to the shell unchanged; empty means none."
     ""))
 
 (defun consult-just--command (name args)
-  "Return the shell command that runs recipe NAME with ARGS."
+  "Return the shell command to run recipe NAME with ARGS."
   (concat (shell-quote-argument (file-local-name (consult-just--executable)))
           " " (shell-quote-argument name)
           (unless (string-empty-p args) (concat " " args))))

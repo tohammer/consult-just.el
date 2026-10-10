@@ -14,7 +14,8 @@ compile:
 	  -f batch-byte-compile consult-just.el
 
 checkdoc:
-	$(BATCH) --eval '(checkdoc-file "consult-just.el")'
+	$(BATCH) --eval '(checkdoc-file "consult-just.el")' \
+	  --eval '(when (get-buffer "*Warnings*") (kill-emacs 1))'
 
 test:
 	$(BATCH) -l test/consult-just-test.el -f ert-run-tests-batch-and-exit
