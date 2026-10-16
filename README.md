@@ -69,6 +69,12 @@ current directory (it searches upward).
   one) and the doc comment. They are plain completion annotations, so they
   show with or without marginalia. Faces: `consult-just-group`,
   `consult-just-doc`.
+- **Matching.** Only the recipe name is matched; the group and doc comment
+  are annotations. With [orderless](https://github.com/oantolin/orderless),
+  prefix a component with `&` to match the annotation instead: `test &ci`
+  lists recipes whose name contains `test` and whose group or doc comment
+  contains `ci`. `&` is in orderless's default
+  `orderless-affix-dispatch-alist`.
 - **Order.** Sorting is left to the completion UI. Vertico's default
   (`vertico-sort-history-length-alpha`) lists recipes from
   `consult-just--history` first, most recent first, then the rest by length
