@@ -10,6 +10,8 @@ comment in two aligned columns, and recently used recipes come first. The
 selected recipe runs in a compilation buffer, so `next-error`, `g` (recompile)
 and the usual compilation keys work on its output.
 
+[![Running a recipe of the nearest justfile with consult-just (click for the full-size demo)](docs/demo-thumb.gif)](docs/demo.gif)
+
 ## Quick start
 
 ```elisp
