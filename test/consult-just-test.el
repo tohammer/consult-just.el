@@ -244,6 +244,36 @@ the output pointed to the wrong place."
     (should (equal (car (nth 0 calls)) "/path/to/project/sub/"))
     (should (string-suffix-p " test y" (nth 1 (nth 0 calls))))))
 
+(defvar projectile-compilation-cmd-map)
+
+(ert-deftest consult-just-test-run-outside-projectile-project ()
+  "Outside a projectile project the command is not stored.
+Regression: storing it called `projectile-compilation-dir', which asks
+the user to switch to a project when there is none."
+  (let ((consult-just-executable "sh")
+        (projectile-compilation-cmd-map (make-hash-table :test 'equal))
+        asked)
+    (cl-letf (((symbol-function 'compile) #'ignore)
+              ((symbol-function 'projectile-project-p) (lambda (&rest _) nil))
+              ((symbol-function 'projectile-compilation-dir)
+               (lambda () (setq asked t) "/somewhere/")))
+      (consult-just--run (consult-just-test--recipe "build") "" "/path/to/project/"))
+    (should-not asked)
+    (should (zerop (hash-table-count projectile-compilation-cmd-map)))))
+
+(ert-deftest consult-just-test-run-inside-projectile-project ()
+  "Inside a projectile project the command is stored for recompiling."
+  (let ((consult-just-executable "sh")
+        (projectile-compilation-cmd-map (make-hash-table :test 'equal)))
+    (cl-letf (((symbol-function 'compile) #'ignore)
+              ((symbol-function 'projectile-project-p)
+               (lambda (&rest _) "/path/to/project/"))
+              ((symbol-function 'projectile-compilation-dir)
+               (lambda () "/path/to/project/")))
+      (consult-just--run (consult-just-test--recipe "build") "" "/path/to/project/"))
+    (should (string-suffix-p " build" (gethash "/path/to/project/"
+                                               projectile-compilation-cmd-map)))))
+
 (ert-deftest consult-just-test-run-reuses-buffer ()
   "Running a recipe twice reuses its compilation buffer.
 Regression: the buffer was renamed after `compile', so each run left a

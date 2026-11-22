@@ -69,9 +69,12 @@
 - **Empty justfile.** A justfile without public recipes gives a
   `user-error`. 0.1 called `max` on an empty list. Test:
   `consult-just-test-no-recipes`.
-- **projectile.** If loaded, the command is stored in
-  `projectile-compilation-cmd-map` for `projectile-compilation-dir`. Guarded
-  with `fboundp`/`boundp`; projectile is not a dependency.
+- **projectile.** If loaded and the run directory is in a project
+  (`projectile-project-p`), the command is stored in
+  `projectile-compilation-cmd-map` for `projectile-compilation-dir`.
+  Outside a project nothing is stored: `projectile-compilation-dir` would
+  ask the user to switch to a project. Guarded with `fboundp`/`boundp`;
+  projectile is not a dependency.
 
 ## Known limitations and open points
 
