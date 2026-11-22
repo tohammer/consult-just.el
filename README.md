@@ -86,8 +86,9 @@ current directory (it searches upward).
 - **Running.** The recipe runs via `compile` in a buffer named
   `*just: RECIPE*`, in the justfile's directory (in the current directory for
   `[no-cd]` recipes). Running the same recipe again reuses its buffer. If
-  [projectile](https://github.com/bbatsov/projectile) is loaded, the command
-  is also stored as the project's compile command.
+  [projectile](https://github.com/bbatsov/projectile) is loaded and the
+  justfile's directory is in a projectile project, the command is also
+  stored as the project's compile command.
 
 ## Configuration
 

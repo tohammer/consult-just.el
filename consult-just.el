@@ -50,6 +50,7 @@
 (require 'subr-x)
 
 (declare-function projectile-compilation-dir "ext:projectile")
+(declare-function projectile-project-p "ext:projectile")
 (defvar projectile-compilation-cmd-map)
 
 (defgroup consult-just nil
@@ -226,9 +227,12 @@ meant; recipes with `no-cd' run in `default-directory' instead."
     (compile cmd)
     ;; Populate projectile's per-project compile cache so that
     ;; `projectile-compile-project' and friends re-run this command
-    ;; without prompting.
-    (when (and (fboundp 'projectile-compilation-dir)
-               (boundp 'projectile-compilation-cmd-map))
+    ;; without prompting.  Only inside a project:
+    ;; `projectile-compilation-dir' asks for one otherwise.
+    (when (and (fboundp 'projectile-project-p)
+               (fboundp 'projectile-compilation-dir)
+               (boundp 'projectile-compilation-cmd-map)
+               (projectile-project-p))
       (puthash (projectile-compilation-dir) cmd projectile-compilation-cmd-map))))
 
 ;;; Public command
